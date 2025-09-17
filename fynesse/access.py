@@ -45,9 +45,13 @@ def load_osm_data(place: str, tags: dict):
     return gdf
 
 
+def init_hdx():
+    Configuration.create(
+        hdx_site="prod",
+        user_agent="fynesse",
+        hdx_read_only=True  # 
+    )
 
-def init_hdx(user_agent: str = "fynesse_project"):
-    Configuration.create(hdx_site="prod", user_agent=user_agent)
 
 
 def search_hdx_datasets(query: str):
