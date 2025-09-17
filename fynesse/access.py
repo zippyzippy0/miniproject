@@ -1,4 +1,3 @@
-# fynesse/access.py
 import os
 import pandas as pd
 import requests
@@ -38,12 +37,19 @@ def download_file(url: str, save_path: str) -> str:
 
 
 def load_osm_data(place: str, tags: dict):
-    gdf = ox.geometries_from_place(place, tags)
+    try:
+        gdf = ox.geometries_from_place(place, tags)
+    except AttributeError:
+        gdf = ox.pois_from_place(place, tags)
     return gdf
 
 
-def init_hdx(user_agent: str = "fynesse_project"):
-    Configuration.create(hdx_site="prod", user_agent=user_agent)
+def init_hdx():
+    Configuration.create(
+        hdx_site="prod",
+        user_agent="fynesse",
+        hdx_read_only=True
+    )
 
 
 def search_hdx_datasets(query: str):
