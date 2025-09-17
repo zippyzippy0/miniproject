@@ -1,4 +1,3 @@
-# fynesse/access.py
 import os
 import pandas as pd
 import requests
@@ -49,9 +48,8 @@ def init_hdx():
     Configuration.create(
         hdx_site="prod",
         user_agent="fynesse",
-        hdx_read_only=True  # 
+        hdx_read_only=True
     )
-
 
 
 def search_hdx_datasets(query: str):
