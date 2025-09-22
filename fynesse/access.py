@@ -8,6 +8,7 @@ from hdx.api.configuration import Configuration
 from hdx.data.dataset import Dataset
 from hdx.data.resource import Resource
 
+DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
 def load_local_csv(filepath: str) -> pd.DataFrame:
     if not os.path.exists(filepath):
