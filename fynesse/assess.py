@@ -1,103 +1,102 @@
-# fynesse/assess.py
+# assess.py
+import pandas as pd
 import numpy as np
-from scipy.stats import bernoulli, norm, pearsonr
-from sklearn.linear_model import LinearRegression
+import matplotlib.pyplot as plt
+import seaborn as sns
+import plotly.express as px
+from scipy.stats import pearsonr, norm
 
-def bernoulli_access(distances_km, threshold_km=5):
+# -------------------------------
+# Data Merging & Preparation
+# -------------------------------
+def merge_facilities(pop_counts, counts_schools, counts_health):
     """
-    Calculate probability of access to a facility within a threshold distance.
-    
-    Parameters:
-        distances_km (array-like): Distances to nearest facility in km.
-        threshold_km (float): Distance threshold (default=5 km).
-        
-    Returns:
-        prob_access (float): Probability of having facility within threshold.
-        outcome (np.ndarray): Bernoulli outcome array (1 if within threshold, else 0).
+    Merge population counts with school and health facility counts per county.
+    Returns a combined DataFrame with all columns needed for Assess stage.
     """
-    distances_km = np.array(distances_km)
-    outcome = (distances_km <= threshold_km).astype(int)
-    prob_access = outcome.mean()
-    return prob_access, outcome
+    common_counties = set(pop_counts["ADM1_EN"]).intersection(counts_schools["ADM1_EN"], counts_health["ADM1_EN"])
+    df = (
+        pop_counts[pop_counts["ADM1_EN"].isin(common_counties)]
+        .merge(counts_schools, on="ADM1_EN", how="inner")
+        .merge(counts_health, on="ADM1_EN", how="inner")
+        .fillna(0)
+    )
+    df.rename(columns={"count_s": "schools", "counts": "hospitals"}, inplace=True)
+    return df
 
-def gaussian_distance_analysis(distances_km):
-    """
-    Fit a Gaussian distribution to distances.
-    
-    Parameters:
-        distances_km (array-like): Distances to nearest facility in km.
-        
-    Returns:
-        mu (float): Mean of distances.
-        sigma (float): Standard deviation of distances.
-        pdf (np.ndarray): Probability density function values for each distance.
-    """
-    distances_km = np.array(distances_km)
-    mu, sigma = np.mean(distances_km), np.std(distances_km)
-    pdf = norm.pdf(distances_km, mu, sigma)
-    return mu, sigma, pdf
+# -------------------------------
+# Correlation Analysis
+# -------------------------------
+def plot_correlation(df, cols, title="Correlation Heatmap"):
+    corr = df[cols].corr()
+    plt.figure(figsize=(6,5))
+    sns.heatmap(corr, annot=True, cmap="coolwarm", fmt=".2f")
+    plt.title(title)
+    plt.show()
+    return corr
 
-def bayesian_regression(X, y):
-    """
-    Simple linear regression using least squares (can be used as a Bayesian approx).
-    
-    Parameters:
-        X (array-like): Predictor(s), shape (n_samples, n_features)
-        y (array-like): Target variable, shape (n_samples,)
-        
-    Returns:
-        coef (np.ndarray): Regression coefficients.
-    """
-    X = np.array(X)
-    y = np.array(y)
-    coef = np.linalg.lstsq(X, y, rcond=None)[0]
-    return coef
+def pearson_correlation(df, col1, col2):
+    corr, pval = pearsonr(df[col1], df[col2])
+    return corr, pval
 
-def pearson_correlation(x, y):
-    """
-    Compute Pearson correlation coefficient and p-value.
-    
-    Parameters:
-        x (array-like)
-        y (array-like)
-        
-    Returns:
-        r (float): Pearson correlation coefficient.
-        p (float): Two-tailed p-value.
-    """
-    x = np.array(x)
-    y = np.array(y)
-    r, p = pearsonr(x, y)
-    return r, p
+# -------------------------------
+# Normalized Comparison Plots
+# -------------------------------
+def plot_normalized_stacked(df, col_pop="pop_total", col_schools="schools"):
+    df_norm = df.copy()
+    df_norm["pop_total_norm"] = df_norm[col_pop] / df_norm[col_pop].sum() * 100
+    df_norm["schools_norm"] = df_norm[col_schools] / df_norm[col_schools].sum() * 100
+    df_sorted = df_norm.sort_values("pop_total_norm")
 
-def linear_model_r2(X, y):
-    """
-    Fit linear regression and compute R² score.
-    
-    Parameters:
-        X (array-like): Predictor(s), shape (n_samples, n_features)
-        y (array-like): Target variable, shape (n_samples,)
-        
-    Returns:
-        r2 (float): R² score.
-        y_pred (np.ndarray): Predicted values from the model.
-    """
-    X = np.array(X)
-    y = np.array(y)
-    model = LinearRegression().fit(X, y)
-    y_pred = model.predict(X)
-    r2 = model.score(X, y)
-    return r2, y_pred
+    fig = px.bar(
+        df_sorted,
+        y="ADM1_EN",
+        x=["pop_total_norm", "schools_norm"],
+        orientation='h',
+        barmode='stack',
+        labels={"value":"Percentage Share (%)", "ADM1_EN":"County"},
+        height=2000
+    )
+    fig.update_layout(title="Population vs Schools per County (Stacked Normalized %)")
+    fig.show()
 
-def normalize_column(df, col_name):
+# -------------------------------
+# Distance Analysis
+# -------------------------------
+def compute_distances(counties_projected, facilities_projected, df_county):
     """
-    Normalize a column as percentage of total sum.
-    
-    Parameters:
-        df (pd.DataFrame): Input dataframe.
-        col_name (str): Column to normalize.
-        
-    Returns:
-        pd.Series: Normalized values (% of total).
+    Compute distances from county centroids to nearest facility.
+    Returns df_county with new column 'dist_to_nearest_facility_km'.
     """
-    return df[col_name] / df[col_name].sum() * 100
+    from shapely.ops import nearest_points
+
+    distances_km = []
+    for index, row in df_county.iterrows():
+        county_name = row["ADM1_EN"]
+        county_geom = counties_projected[counties_projected["ADM1_EN"] == county_name].geometry.iloc[0]
+        county_center = county_geom.centroid
+
+        nearest_distance = facilities_projected.distance(county_center).min()
+        distances_km.append(nearest_distance / 1000.0)
+
+    df_county["dist_to_nearest_facility_km"] = distances_km
+    return df_county
+
+def plot_distance_distribution(df_county, column="dist_to_nearest_facility_km"):
+    mu, std = norm.fit(df_county[column])
+    plt.figure(figsize=(10,5))
+    sns.histplot(df_county[column], kde=True, color="green")
+    plt.axvline(mu, color="red", linestyle="--")
+    plt.title(f"Distances to Nearest Facility (mean={mu:.2f} km)")
+    plt.xlabel("Distance (km)")
+    plt.ylabel("Frequency")
+    plt.show()
+    return mu, std
+
+# -------------------------------
+# Bernoulli Access Probability
+# -------------------------------
+def bernoulli_access(df_county, threshold_km=5, column="dist_to_nearest_facility_km"):
+    bern_outcome = (df_county[column] <= threshold_km).astype(int)
+    prob_access = bern_outcome.mean()
+    return prob_access
