@@ -14,11 +14,33 @@ def load_local_csv(filepath: str) -> pd.DataFrame:
     return pd.read_csv(filepath)
 
 
-def load_local_shapefile(filepath: str) -> gpd.GeoDataFrame:
-    """Load a local shapefile or GeoJSON into a GeoDataFrame."""
-    if not os.path.exists(filepath):
-        raise FileNotFoundError(f"File not found: {filepath}")
-    return gpd.read_file(filepath)
+def load_shapefile_from_github(base_url: str, prefix: str) -> str:
+    """
+    Download all necessary shapefile components (.shp, .shx, .dbf, .prj) 
+    from a GitHub raw base URL into local data directory.
+    
+    Args:
+        base_url (str): Base raw GitHub URL without trailing slash
+        prefix (str): Common file prefix (e.g., 'ken_admbnda_adm0_iebc_20191031')
+    
+    Returns:
+        str: Path to the local .shp file
+    """
+    exts = ["shp", "shx", "dbf", "prj"]
+    local_files = []
+    for ext in exts:
+        url = f"{base_url}/{prefix}.{ext}"
+        local_path = os.path.join(DATA_DIR, f"{prefix}.{ext}")
+        if not os.path.exists(local_path):
+            r = requests.get(url)
+            if r.status_code == 200:
+                os.makedirs(DATA_DIR, exist_ok=True)
+                with open(local_path, "wb") as f:
+                    f.write(r.content)
+            else:
+                raise ConnectionError(f"Failed to download {url}")
+        local_files.append(local_path)
+    return local_files[0]  # return path to .shp
 
 
 def load_osm_data(place_name: str, network_type: str = "all") -> gpd.GeoDataFrame:
