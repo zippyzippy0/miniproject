@@ -68,3 +68,8 @@ def load_shapefile_from_github(base_url, prefix):
         download_file(url, local_path)
         local_paths.append(local_path)
     return local_paths[0]
+
+load_local_csv = lambda path: load_file(path, filetype="csv")
+load_local_shapefile = lambda path: load_file(path, filetype="shp")
+load_from_github = download_file
+load_osm_data = load_osm
