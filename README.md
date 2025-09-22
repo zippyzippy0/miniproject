@@ -54,15 +54,25 @@ Provide actionable recommendations for resource allocation.
 
 **Project** **Structure**
 miniproject/
+
 │
+
 ├─ data/ # CSV and shapefiles
+
 ├─ fynesse/
+
 │ ├─ access.py # Data loading and preprocessing
+
 │ ├─ assess.py # Analysis and visualization functions
+
 │ └─ address.py # Recommendations and per-capita metrics
+
 ├─ notebooks/
+
 │ └─ Kenya_Facility_Analysis.ipynb
+
 ├─ README.md
+
 └─ requirements.txt # Python dependencies
 
 **Data** **Sources**
