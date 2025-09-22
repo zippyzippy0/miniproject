@@ -1,7 +1,9 @@
 import os
-import pandas as pd
 import requests
+import warnings
 import osmnx as ox
+import pandas as pd
+
 from hdx.api.configuration import Configuration
 from hdx.data.dataset import Dataset
 from hdx.data.resource import Resource
@@ -46,29 +48,17 @@ def load_osm_data(place: str, tags: dict):
 
 def init_hdx():
     Configuration.create(
-        hdx_site="prod",
-        user_agent="fynesse",
-        hdx_read_only=True
+        hdx_site="prod", user_agent="fynesse", hdx_read_only=True
     )
 
 
 def search_hdx_datasets(query: str):
-    results = Dataset.search_in_hdx(query)
-    return results
+    return Dataset.search_in_hdx(query)
 
 
 def download_hdx_resource(dataset_name: str, resource_name: str, save_path: str) -> str:
     dataset = Dataset.read_from_hdx(dataset_name)
     for resource in dataset.get_resources():
         if resource_name.lower() in resource["name"].lower():
-            path = resource.download(save_path)
-            return path
+            return resource.download(save_path)
     raise ValueError(f"Resource {resource_name} not found in dataset {dataset_name}")
-
-
-def fetch_api_json(url: str, params: dict = None) -> pd.DataFrame:
-    response = requests.get(url, params=params)
-    if response.status_code == 200:
-        return pd.json_normalize(response.json())
-    else:
-        raise Exception(f"Failed API request {url}, status code {response.status_code}")
