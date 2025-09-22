@@ -1,4 +1,4 @@
-**Kenya Population and Public Facility Analysis**
+**Assessment of Access to Essential Services in Kenya**
 
 This project analyzes the distribution of schools and health facilities across Kenyan counties and sub-counties, assesses infrastructure per capita, and provides insights for prioritizing investments in public services.
 
@@ -53,6 +53,7 @@ Identify counties with the greatest gaps in schools and health facilities per ca
 Provide actionable recommendations for resource allocation.
 
 **Project** **Structure**
+
 miniproject/
 
 │
@@ -90,10 +91,13 @@ All geospatial datasets are publicly available via GitHub or HOTOSM. CSV populat
 Clone the repository and install required packages:
 
 git clone https://github.com/zippyzippy0/miniproject.git
+
 cd miniproject
+
 pip install -r requirements.txt
 
 **Dependencies** **include**:
+
 pandas, geopandas, numpy, seaborn, matplotlib, scikit-learn, osmnx
 
 Note: osmnx may require extra system dependencies for geospatial operations.
