@@ -1,8 +1,11 @@
-hdx-python-api
-osmnx
-geopandas
+pandas
 numpy
-scipy
 matplotlib
 seaborn
-folium
+scipy
+geopandas
+osmnx
+hdx-python-api
+requests
+jupyter
+notebook
