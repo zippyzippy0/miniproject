@@ -63,3 +63,12 @@ def download_hdx_resource(dataset_name: str, resource_name: str, save_path: str)
         if resource_name.lower() in resource["name"].lower():
             return resource.download(save_path)
     raise ValueError(f"Resource {resource_name} not found in dataset {dataset_name}")
+
+import geopandas as gpd
+
+
+def load_local_shapefile(filename: str) -> gpd.GeoDataFrame:
+    path = _resolve_path(filename)
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"File not found: {path}")
+    return gpd.read_file(path)
