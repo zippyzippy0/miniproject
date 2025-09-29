@@ -3,6 +3,8 @@ import requests
 import pandas as pd
 import geopandas as gpd
 import osmnx as ox
+import unidecode
+from fuzzywuzzy import process
 from hdx.api.configuration import Configuration
 from hdx.data.dataset import Dataset
 
@@ -14,8 +16,10 @@ def load_file(filepath, filetype=None, sheet_name=None):
         raise FileNotFoundError(f"File not found: {filepath}")
     if filetype is None:
         ext = os.path.splitext(filepath)[1].lower()
-        filetype = {"csv":"csv", ".xlsx":"excel", ".xls":"excel",
-                    ".json":"json", ".shp":"shp"}.get(ext, None)
+        filetype = {
+            ".csv": "csv", ".xlsx": "excel", ".xls": "excel",
+            ".json": "json", ".shp": "shp"
+        }.get(ext, None)
         if filetype is None:
             raise ValueError(f"Cannot infer file type from extension '{ext}'")
     if filetype == "csv":
@@ -69,6 +73,37 @@ def load_shapefile_from_github(base_url, prefix):
         local_paths.append(local_path)
     return local_paths[0]
 
+# --- New: County cleaning ---
+OFFICIAL_COUNTIES = [
+    "Baringo", "Bomet", "Bungoma", "Busia", "Elgeyo-Marakwet", "Embu", 
+    "Garissa", "Homa Bay", "Isiolo", "Kajiado", "Kakamega", "Kericho", 
+    "Kiambu", "Kilifi", "Kirinyaga", "Kisii", "Kisumu", "Kitui", 
+    "Kwale", "Laikipia", "Lamu", "Machakos", "Makueni", "Mandera", 
+    "Marsabit", "Meru", "Migori", "Mombasa", "Murang'a", "Nairobi", 
+    "Nakuru", "Nandi", "Narok", "Nyamira", "Nyandarua", "Nyeri", 
+    "Samburu", "Siaya", "Taita-Taveta", "Tana River", "Tharaka-Nithi", 
+    "Trans Nzoia", "Turkana", "Uasin Gishu", "Vihiga", "Wajir", "West Pokot"
+]
+
+def clean_county_names(df, col="county"):
+    """Clean and standardize county names to match Kenya’s 47 official counties."""
+    df[col] = (
+        df[col]
+        .astype(str)
+        .str.strip()
+        .str.lower()
+        .str.replace(r"[-']", " ", regex=True)
+        .apply(unidecode.unidecode)
+    )
+
+    def match_county(name):
+        match, score = process.extractOne(name, [c.lower() for c in OFFICIAL_COUNTIES])
+        return match.title() if score > 80 else name.title()
+
+    df[col] = df[col].apply(match_county)
+    return df
+
+# --- Shortcuts ---
 load_local_csv = lambda path: load_file(path, filetype="csv")
 load_local_shapefile = lambda path: load_file(path, filetype="shp")
 load_from_github = download_file
